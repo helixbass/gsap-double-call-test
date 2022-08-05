@@ -3,32 +3,35 @@ import { gsap } from 'gsap';
 import logo from './logo.svg';
 import './App.css';
 
+const useDoubleCallableGsapFrom = (): /*typeof gsap.from*/ ((targets: gsap.TweenTarget, vars: gsap.TweenVars) => gsap.core.Tween) => {
+  const endValuesRef = useRef<gsap.TweenVars | null>(null);
+  return (targets, fromValues) => {
+    const cachedEndValues = endValuesRef.current
+    if (cachedEndValues) {
+      return gsap.fromTo(targets, fromValues, cachedEndValues)
+    } else {
+      const tween = gsap.from(targets, fromValues)
+      tween.progress(1)
+      const firstTargetElement = tween.targets()[0]
+      const endValues = {}
+      Object.keys(fromValues).forEach(propertyName => {
+        (endValues as any)[propertyName] = gsap.getProperty(firstTargetElement as any, propertyName)
+      })
+      endValuesRef.current = endValues
+      tween.progress(0)
+      return tween
+    }
+  }
+}
+
 function App() {
   const logoRef = useRef<HTMLImageElement | null>(null);
-  const cacheTweenEndValuesRef = useRef<any | null>(null);
+  const gsapFrom = useDoubleCallableGsapFrom()
   useEffect(() => {
     console.log('calling effect on mount')
-    if (cacheTweenEndValuesRef.current) {
-      console.log('using cached end values for .fromTo()')
-      gsap.fromTo(logoRef.current, {
-        scale: 0.5,
-      }, cacheTweenEndValuesRef.current)
-    } else {
-      const tween = gsap.from(logoRef.current, {
-        scale: 0.5,
-      })
-      tween.progress(1)
-      const endValues: any = {}
-      console.log({endValuesPre: endValues})
-      Object.keys({scale: 0.5}).forEach(propertyName => {
-        console.log({propertyName})
-        endValues[propertyName] = gsap.getProperty(logoRef.current, propertyName)
-        console.log({endValuesDuring: endValues})
-      })
-      console.log({endValues})
-      cacheTweenEndValuesRef.current = endValues
-      tween.progress(0)
-    }
+    gsapFrom(logoRef.current, {
+      scale: 0.5,
+    })
   }, [])
 
   return (
