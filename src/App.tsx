@@ -31,6 +31,8 @@ function App() {
     console.log('calling effect on mount')
     gsapFrom(logoRef.current, {
       scale: 0.5,
+      y: 130,
+      opacity: 0,
     })
   }, [])
 
